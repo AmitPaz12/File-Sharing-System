@@ -20,7 +20,7 @@ def create_new_client_id():
     return client_id
 
 
-def create_socket(folder_path):
+def create_socket(path):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('', PORT))
     s.listen()
@@ -31,7 +31,10 @@ def create_socket(folder_path):
         if data.decode() == 'add my folder':
             client_id = create_new_client_id()
             client_socket.send(client_id.encode())
-            pull_data(folder_path, s)
+            folder_path = path + '/' + str(client_id)
+            pull_data(folder_path, client_socket)
+        else:
+            push_data(os.path.abspath(data.decode()), s)
 
         client_socket.close()
 
