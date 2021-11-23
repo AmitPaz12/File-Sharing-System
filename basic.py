@@ -5,42 +5,50 @@ import string
 
 
 # pull to my folder
+import time
+
+
 def pull_data(path, s):
-    number_files = s.recv(4).decode()
-    for i in range(number_files):
-        protocol_size = s.recv(4).decode()
-        file_name, size = s.recv(protocol_size).decode().split(',')
-        file_size = int(size)
-        complete_name = os.path.join(path, file_name)
-        new_file = open(complete_name, "w")
-        while new_file.tell() <= file_size:
-            new_file.write(s.recv(1024).decode())
-        new_file.close()
+    with s, s.makefile('rb') as file:
+        while True:
+            number_files = int(file.readline())
+            for i in range(number_files):
+                file_name = file.readline().strip().decode()
+                if file_name.endswith(',isdir'):
+                    name, isdir = file_name.split(',')
+                    new_path = create_inner_folder(name, path)
+                    pull_data(new_path, s)
+                else:
+                    file_size = int(file.readline())
+                    data = file.read(file_size)
+                    with open(os.path.join(path, file_name), 'wb') as f:
+                        f.write(data)
 
 
 def push_data(path, s):
-    number_files = len([f for f in os.listdir(path)])
-    s.send(f"{str(number_files)}".encode())
-
-    for file in os.listdir(path):
-        relative_file = path + '/' + str(os.path.basename(file))
-        protocol = str(os.path.basename(relative_file)) + ',' + str(os.stat(relative_file))
-        len_protocol = len(protocol)
-        s.send(bytes(len_protocol))
-        s.send(protocol.encode())
-        f = open(os.path.abspath(relative_file), 'r')
-
-        # s.send(f"{str(os.path.basename(file))}{','}{str(os.path.getsize(file))}".encode())
-        # s.send(f"{str(os.path.getsize(file))}{','}".encode())
-        while True:
-            data = f.read(1024)
-            while data:
-                s.send(data.encode())
-                data = f.read(1024)
-            break
-
-        # s.send(f"{open(os.path.abspath(path), 'r')}{','}".encode())
-
+    with s:
+        files = os.listdir(path)
+        s.sendall(str(len(files)).encode() + b'\n')
+        time.sleep(1)
+        for file in files:
+            print(file)
+            relative_file = os.path.join(path, file)
+            if os.path.isdir(relative_file):
+                s.sendall(file.encode() + b',isdir' + b'\n')
+                time.sleep(1)
+                push_data(relative_file, s)
+            else:
+                file_size = os.path.getsize(relative_file)
+                s.sendall(file.encode() + b'\n')
+                time.sleep(1)
+                s.sendall(str(file_size).encode() + b'\n')
+                time.sleep(1)
+                with open(relative_file, 'rb') as f:
+                    s.sendall(f.read())
+                    time.sleep(1)
 
 
+def create_inner_folder(name, path):
+    os.mkdir(os.path.join(path, name))
+    return os.path.join(path, name)
 
