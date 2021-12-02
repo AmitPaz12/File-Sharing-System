@@ -24,19 +24,20 @@ def create_socket(path):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('', PORT))
     s.listen()
-
     while True:
         client_socket, client_address = s.accept()
-        data = client_socket.recv(150)
-        if data.decode() == 'add my folder':
-            client_id = create_new_client_id()
-            client_socket.send(client_id.encode())
-            folder_path = path + '/' + str(client_id)
-            pull_data(folder_path, client_socket)
-        else:
-            push_data(os.path.abspath(data.decode()), s)
+        with client_socket, client_socket.makefile('rb') as file:
+            data = file.readline().strip().decode()
+            if data == 'add my folder':
+                client_id = create_new_client_id()
+                client_socket.sendall(client_id.encode() + b'\n')
+                folder_path = path + '/' + str(client_id)
+                pull_data(folder_path, client_socket)
+            else:
+                push_data(os.path.abspath('Clients') + '/' + data, s)
 
         client_socket.close()
+
 
 
 # check if port is valid

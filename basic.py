@@ -10,19 +10,20 @@ import time
 
 def pull_data(path, s):
     with s, s.makefile('rb') as file:
-        while True:
-            number_files = int(file.readline())
-            for i in range(number_files):
-                file_name = file.readline().strip().decode()
-                if file_name.endswith(',isdir'):
-                    name, isdir = file_name.split(',')
-                    new_path = create_inner_folder(name, path)
-                    pull_data(new_path, s)
-                else:
-                    file_size = int(file.readline())
-                    data = file.read(file_size)
-                    with open(os.path.join(path, file_name), 'wb') as f:
-                        f.write(data)
+        number_files = int(file.readline().strip().decode())
+        print(number_files)
+        for i in range(number_files):
+            file_name = file.readline().strip().decode()
+            if file_name.endswith(',isdir'):
+                name, isdir = file_name.split(',')
+                new_path = create_inner_folder(name, path)
+                print(new_path)
+                pull_data(new_path, s)
+            else:
+                file_size = int(file.readline().strip().decode())
+                data = file.read(file_size)
+                with open(os.path.join(path, file_name), 'wb') as f:
+                    f.write(data)
 
 
 def push_data(path, s):
