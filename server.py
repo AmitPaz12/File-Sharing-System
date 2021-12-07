@@ -22,16 +22,31 @@ def insert_updates(client_id, num, src_path, event, dst_path):
     for key in clients_dic[client_id]:
         if key != num:
             if dst_path is None:
-                clients_dic[client_id][key] = [event, src_path]
+                clients_dic[client_id][key].append([event, src_path])
             else:
-                clients_dic[client_id][key] = [event, src_path, dst_path]
+                clients_dic[client_id][key].append([event, src_path, dst_path])
 
 
 def delete_path(src_path):
     if os.path.isdir(os.path.dirname(src_path)):
-        os.rmdir(os.path.dirname(src_path))
+        if not os.listdir(os.path.dirname(src_path)):
+            os.rmdir(os.path.dirname(src_path))
+        else:
+            for sub in src_path.iterdir():
+                if sub.is_dir():
+                    delete_path(sub)
+                else:
+                    os.remove(os.path.basename(sub))
     else:
         os.remove(os.path.basename(src_path))
+
+
+def delete_updates(client_id, num,event, src_path, dst_path):
+    updates_list = clients_dic[client_id][num]
+    wanted_update = [event, src_path, dst_path]
+    for update in updates_list:
+        if update == wanted_update:
+            updates_list.pop(wanted_update)
 
 
 def init_clients_folder():
@@ -60,6 +75,14 @@ def create_socket(path):
                 client_socket.sendall(client_id.encode() + b'\n')
                 folder_path = path + '/' + str(client_id)
                 pull_data(folder_path, client_socket)
+
+            elif data == 'update me':
+                client_id = file.readline().strip().decode()
+                length = len(clients_dic[client_id][client_address])
+                client_socket.sendall((str(length)).encode() + b'\n')
+                for i in range(length):
+                    for j in range(3):
+                        client_socket.sendall(clients_dic[client_id][client_address][i][j].encode() + b'\n')
 
             elif data == 'created':
                 src_path = file.readline().strip().decode()

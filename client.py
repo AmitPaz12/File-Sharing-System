@@ -88,15 +88,18 @@ def check_for_updates():
     with sock, sock.makefile('rb') as file:
         sock.sendall('update me\n'.encode())
         sock.sendall(client_id.encode() + b'\n')
-        update_type = file.readline().strip().decode()
-        update_src_path = file.readline().strip().decode()
-        update_dest_path = file.readline().strip().decode()
-        if update_type == 'created':
-            create(update_src_path)
-        elif update_type == 'deleted':
-            delete(update_src_path)
-        elif update_type == 'moved':
-            move(update_src_path, update_dest_path)
+
+        length = int(file.readline().strip().decode())
+        for i in range(length):
+            update_type = file.readline().strip().decode()
+            update_src_path = file.readline().strip().decode()
+            update_dst_path = file.readline().strip().decode()
+            if update_type == 'created':
+                create(update_src_path)
+            elif update_type == 'deleted':
+                delete(update_src_path)
+            elif update_type == 'moved':
+                move(update_src_path, update_dst_path)
 
 
 if __name__ == '__main__':
