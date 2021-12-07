@@ -24,22 +24,27 @@ def connect_to_server(ip, port):
 def push_folder_to_server(sock, folder_path):
     with sock, sock.makefile('rb') as file:
         sock.sendall(b'add my folder\n')
+        my_number = file.readline().strip().decode()
         my_id = file.readline().strip().decode()
         push_data(folder_path, sock)
-        return my_id
+        return my_id, my_number
 
 
 def pull_folder_from_server(sock, my_path, folder_name):
-    with sock:
+    with sock, sock.makefile('rb') as file:
         sock.sendall(folder_name.encode() + b'\n')
+        my_number = file.readline().strip().decode()
         pull_data(my_path, sock)
+        return my_number
 
 
 def create(src_path):
     sock = connect_to_server(ip_server, port_server)
     sock.sendall('created'.encode() + b'\n')
+    sock.sendall(client_number.encode() + b'\n')
     sock.sendall(src_path.encode() + b'\n')
     push_data(src_path, sock)
+    print('created')
 
 
 def on_created(event):
@@ -50,7 +55,9 @@ def on_created(event):
 def delete(src_path):
     sock = connect_to_server(ip_server, port_server)
     sock.sendall('deleted'.encode() + b'\n')
+    sock.sendall(client_number.encode() + b'\n')
     sock.sendall(src_path.encode() + b'\n')
+    print('deleted')
 
 
 def on_deleted(event):
@@ -59,7 +66,8 @@ def on_deleted(event):
 
 
 def on_modified(event):
-    pass
+    print(f"hey buddy, {event.src_path} has been modified")
+
 #     print(f"hey buddy, {event.src_path} has been modified")
 #     sock = connect_to_server(ip_server, port_server)
 #     if ((str(event.src_path).split('//'))[-1])[0] == '.':
@@ -70,9 +78,11 @@ def on_modified(event):
 def move(src_path, dest_path):
     sock = connect_to_server(ip_server, port_server)
     sock.sendall('moved'.encode() + b'\n')
+    sock.sendall(client_number.encode() + b'\n')
     sock.sendall(src_path.encode() + b'\n')
     sock.sendall(dest_path.encode() + b'\n')
     push_data(src_path, sock)
+    print('moved')
 
 
 def on_moved(event):
@@ -88,18 +98,20 @@ def check_for_updates():
     with sock, sock.makefile('rb') as file:
         sock.sendall('update me\n'.encode())
         sock.sendall(client_id.encode() + b'\n')
-
+        sock.sendall(client_number.encode() + b'\n')
         length = int(file.readline().strip().decode())
-        for i in range(length):
-            update_type = file.readline().strip().decode()
-            update_src_path = file.readline().strip().decode()
-            update_dst_path = file.readline().strip().decode()
-            if update_type == 'created':
-                create(update_src_path)
-            elif update_type == 'deleted':
-                delete(update_src_path)
-            elif update_type == 'moved':
-                move(update_src_path, update_dst_path)
+        print(length)
+        if length != -1:
+            for i in range(length):
+                update_type = file.readline().strip().decode()
+                update_src_path = file.readline().strip().decode()
+                update_dst_path = file.readline().strip().decode()
+                if update_type == 'created':
+                    create(update_src_path)
+                elif update_type == 'deleted':
+                    delete(update_src_path)
+                elif update_type == 'moved':
+                    move(update_src_path, update_dst_path)
 
 
 if __name__ == '__main__':
@@ -110,10 +122,10 @@ if __name__ == '__main__':
     s = connect_to_server(ip_server, port_server)
     if len(sys.argv) == 6:
         client_id = sys.argv[5]
-        pull_folder_from_server(s, path, client_id)
+        client_number = pull_folder_from_server(s, path, client_id)
 
     else:
-        client_id = push_folder_to_server(s, path)
+        client_id, client_number = push_folder_to_server(s, path)
     s.close()
 
     # the file patterns we want to handle
@@ -140,6 +152,7 @@ if __name__ == '__main__':
     try:
         while True:
             time.sleep(timer)
+            print('sleep time ended')
             check_for_updates()
     except KeyboardInterrupt:
         my_observer.stop()
