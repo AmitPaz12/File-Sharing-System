@@ -7,6 +7,7 @@ import string
 # pull to my folder
 import time
 
+
 def pull_data(path, s):
     with s, s.makefile('rb') as file:
         number_files = int(file.readline().strip().decode())
