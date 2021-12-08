@@ -3,7 +3,7 @@ import random
 import socket
 import string
 import sys
-from basic import push_data, pull_data
+from basic import push_data, pull_data, pull_file
 
 max_port = 65535
 min_port = 1023
@@ -27,11 +27,14 @@ def insert_updates(client_id, num, src_path, event, dst_path):
                 clients_dic[client_id][key].append([event, src_path])
             else:
                 clients_dic[client_id][key].append([event, src_path, dst_path])
+    print(list(clients_dic.keys()))
+    print(list(clients_dic[client_id].keys()))
+    print(clients_dic[client_id])
 
 
 def delete_path(src_path):
-    if os.path.isdir(os.path.dirname(src_path)):
-        if not os.listdir(os.path.dirname(src_path)):
+    if os.path.isdir(src_path):
+        if not os.listdir(src_path):
             os.rmdir(os.path.dirname(src_path))
         else:
             for sub in src_path.iterdir():
@@ -40,7 +43,7 @@ def delete_path(src_path):
                 else:
                     os.remove(os.path.basename(sub))
     else:
-        os.remove(os.path.basename(src_path))
+        os.remove(src_path)
 
 
 def delete_updates(client_id, num, event, src_path, dst_path):
@@ -74,8 +77,9 @@ def create_socket(path):
         client_socket, client_address = s.accept()
         with client_socket, client_socket.makefile('rb') as file:
             data = file.readline().strip().decode()
-            print(data)
+
             if data == 'add my folder':
+                print(data)
                 num = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(128))
                 client_socket.sendall(num.encode() + b'\n')
                 client_id = create_new_client_id(num)
@@ -84,6 +88,7 @@ def create_socket(path):
                 pull_data(folder_path, client_socket)
 
             elif data == 'update me':
+                print(data)
                 client_id = file.readline().strip().decode()
                 print('client id:' + client_id)
                 client_number = file.readline().strip().decode()
@@ -96,25 +101,34 @@ def create_socket(path):
                     continue
                 client_socket.sendall((str(length)).encode() + b'\n')
                 for i in range(length):
-                    for j in range(3):
+                    for j in range(len(clients_dic[client_id][client_number][i])):
                         client_socket.sendall(clients_dic[client_id][client_number][i][j].encode() + b'\n')
                         print('sent ' + clients_dic[client_id][client_number][i][j])
 
             elif data == 'created':
+                print(data)
                 client_number = file.readline().strip().decode()
+                print(client_number)
                 src_path = file.readline().strip().decode()
+                print(src_path)
                 insert_updates(client_id, client_number, src_path, data, None)
-                pull_data(os.path.abspath('Clients') + '/' + src_path, client_socket)
-                print('pulled data')
+                print(str(os.path.abspath('Clients') + '/' + client_id))
+                pull_file(os.path.abspath('Clients') + '/' + str(client_id) + src_path, client_socket)
+                print('pulled file')
 
             elif data == 'deleted':
+                print(data)
                 client_number = file.readline().strip().decode()
                 src_path = file.readline().strip().decode()
+                print(src_path)
                 insert_updates(client_id, client_number, src_path, data, None)
-                delete_path(src_path)
+                print(os.path.abspath('Clients') + '/' + str(client_id) + src_path)
+                delete_path(os.path.abspath('Clients') + '/' + str(client_id) + src_path)
+
                 print('deleted path')
 
             elif data == 'moved':
+                print(data)
                 client_number = file.readline().strip().decode()
                 src_path = file.readline().strip().decode()
                 dst_path = file.readline().strip().decode()
@@ -124,6 +138,7 @@ def create_socket(path):
                 print('moved path')
 
             elif data == 'modified':
+                print(data)
                 client_number = file.readline().strip().decode()
                 src_path = file.readline().strip().decode()
                 insert_updates(client_id, client_number, src_path, data, None)
@@ -132,6 +147,7 @@ def create_socket(path):
                 print('modified path')
 
             else:
+                print(data)
                 num = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(128))
                 print(num)
                 add_to_dic(client_id, num)

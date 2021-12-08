@@ -8,7 +8,30 @@ import string
 import time
 
 
+def pull_file(path, s):
+    with s, s.makefile('rb') as file:
+        file_name = file.readline().strip().decode()
+        file_size = int(file.readline().strip().decode())
+        data = file.read(file_size)
+        with open(os.path.join(path, file_name), 'wb') as f:
+            f.write(data)
+
+
+def push_file(path, s):
+    print('entered push file')
+    relative_file = os.path.basename(path)
+    file_size = os.path.getsize(path)
+    s.sendall(relative_file.encode() + b'\n')
+    time.sleep(1)
+    s.sendall(str(file_size).encode() + b'\n')
+    time.sleep(1)
+    with open(path, 'rb') as f:
+        s.sendall(f.read())
+        time.sleep(1)
+
+
 def pull_data(path, s):
+    print('PULLED')
     with s, s.makefile('rb') as file:
         number_files = int(file.readline().strip().decode())
         print(number_files)
@@ -27,6 +50,7 @@ def pull_data(path, s):
 
 
 def push_data(path, s):
+    print('PUSHED')
     with s:
         files = os.listdir(path)
         s.sendall(str(len(files)).encode() + b'\n')
