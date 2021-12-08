@@ -21,8 +21,10 @@ def add_to_dic(client_id, num):
 
 
 def insert_updates(client_id, num, src_path, event, dst_path):
-    for key in clients_dic[client_id]:
+    for key in list(clients_dic[client_id].keys()):
         if key != num:
+            print('key:' + key)
+            print('num:' + num)
             if dst_path is None:
                 clients_dic[client_id][key].append([event, src_path])
             else:
@@ -33,15 +35,18 @@ def insert_updates(client_id, num, src_path, event, dst_path):
 
 
 def delete_path(src_path):
+    print(src_path)
     if os.path.isdir(src_path):
         if not os.listdir(src_path):
-            os.rmdir(os.path.dirname(src_path))
+            os.rmdir(src_path)
+            return
         else:
-            for sub in src_path.iterdir():
-                if sub.is_dir():
-                    delete_path(sub)
-                else:
-                    os.remove(os.path.basename(sub))
+            for sub in os.listdir(src_path):
+                relative_path = os.path.join(src_path, sub)
+                print('relative path:' + relative_path)
+                if not os.path.isdir(relative_path):
+                    os.remove(relative_path)
+                delete_path(src_path)
     else:
         os.remove(src_path)
 
@@ -106,45 +111,53 @@ def create_socket(path):
                         print('sent ' + clients_dic[client_id][client_number][i][j])
 
             elif data == 'created':
-                print(data)
-                client_number = file.readline().strip().decode()
-                print(client_number)
-                src_path = file.readline().strip().decode()
-                print(src_path)
-                insert_updates(client_id, client_number, src_path, data, None)
-                print(str(os.path.abspath('Clients') + '/' + client_id))
-                pull_file(os.path.abspath('Clients') + '/' + str(client_id) + src_path, client_socket)
-                print('pulled file')
+                flag = file.readline().strip().decode()
+                if not flag:
+                    print(data)
+                    client_number = file.readline().strip().decode()
+                    print(client_number)
+                    src_path = file.readline().strip().decode()
+                    print(src_path)
+                    insert_updates(client_id, client_number, src_path, data, None)
+                    print(str(os.path.abspath('Clients') + '/' + client_id))
+                    pull_file(os.path.abspath('Clients') + '/' + str(client_id) + src_path, client_socket)
+                    print('pulled file')
 
             elif data == 'deleted':
+                flag = file.readline().strip().decode()
                 print(data)
-                client_number = file.readline().strip().decode()
-                src_path = file.readline().strip().decode()
-                print(src_path)
-                insert_updates(client_id, client_number, src_path, data, None)
-                print(os.path.abspath('Clients') + '/' + str(client_id) + src_path)
-                delete_path(os.path.abspath('Clients') + '/' + str(client_id) + src_path)
-
-                print('deleted path')
+                print(flag)
+                if not flag:
+                    client_number = file.readline().strip().decode()
+                    src_path = file.readline().strip().decode()
+                    print(src_path)
+                    insert_updates(client_id, client_number, src_path, data, None)
+                    print(os.path.abspath('Clients') + '/' + str(client_id) + src_path)
+                    delete_path(os.path.abspath('Clients') + '/' + str(client_id) + src_path)
+                    print('deleted path')
 
             elif data == 'moved':
-                print(data)
-                client_number = file.readline().strip().decode()
-                src_path = file.readline().strip().decode()
-                dst_path = file.readline().strip().decode()
-                insert_updates(client_id, client_number, src_path, data, dst_path)
-                pull_data(dst_path, client_socket)
-                delete_path(src_path)
-                print('moved path')
+                flag = file.readline().strip().decode()
+                if not flag:
+                    print(data)
+                    client_number = file.readline().strip().decode()
+                    src_path = file.readline().strip().decode()
+                    dst_path = file.readline().strip().decode()
+                    insert_updates(client_id, client_number, src_path, data, dst_path)
+                    pull_data(dst_path, client_socket)
+                    delete_path(src_path)
+                    print('moved path')
 
             elif data == 'modified':
-                print(data)
-                client_number = file.readline().strip().decode()
-                src_path = file.readline().strip().decode()
-                insert_updates(client_id, client_number, src_path, data, None)
-                pull_data(src_path, client_socket)
-                delete_path(src_path)
-                print('modified path')
+                flag = file.readline().strip().decode()
+                if not flag:
+                    print(data)
+                    client_number = file.readline().strip().decode()
+                    src_path = file.readline().strip().decode()
+                    insert_updates(client_id, client_number, src_path, data, None)
+                    pull_data(src_path, client_socket)
+                    delete_path(src_path)
+                    print('modified path')
 
             else:
                 print(data)
