@@ -125,8 +125,8 @@ def create_socket(path):
 
             elif data == 'deleted':
                 flag = file.readline().strip().decode()
-                print(flag)
                 print(data)
+                print(flag)
                 if not flag:
                     client_number = file.readline().strip().decode()
                     src_path = file.readline().strip().decode()
