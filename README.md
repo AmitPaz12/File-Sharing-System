@@ -1,41 +1,83 @@
-# TCP Over UDP
-a project for Computer Networks at BIU using Python
+# File Sharing System
+a project for Computer Networks at BIU written in Python
 
 ## Introduction
-Implementing some of TCP features over UDP:
+This project is a file sharing platform.
 
-    connection using 3-way handshaking
-    pipelined reliable data transfer using Selective repeat.
-    congestion control similar to TCP Tahoe
- 
-## Algorithm
-This algorithm attempts to forward 100 bytes of information in each package from the client to the server.
-
-The information is forwarded through the router 'foo' that simulates an internet connection.
-The algorithm resembles a pipeline connection; each package sent and received is marked with an appropriate flag, allowing the lost package to be retransmitted.
-
+    Watchdog module to monitor changes in the folder.
+    support for multiple diffrent clients.
+    support for multiple diffrent sessions within a client.
+    
  ### Client-Side
  
 #### Connection initialization:
-The client is being initialized; the file is loaded into the `data` variable, then the variable is split into 97-byte chunks of data.
-The client then connects with the server by sending the SYN flag and the desired number of packages (chunks).
-The client awaits the SYN + ACK from the server and transmits the final ACK + first chunk of data.
+The client is being initialized; a client should provide five arguments:
+1. `IP` - server's IP.
+2. `PORT` - server's port.
+3. `PATH` - path to the synchronized folder.
+4. `TIME` - desired interval for an update.
+5. `ID` - client's ID
 
-#### Package Transmission:
-Using the iterator defined in the class, the client sends the packages to the server; for each package sent, the client awaits the acknowledgment message; if the message does not arrive within the default timeout window, the client retransmits the package.
+The method `initialize_connection`:
+The method will check if a client has provided an ID; if so, the client will send a pull request to the server requesting the files stored on the server.
+o.w a new client will be initialized, and the server will send a push request to the server resulting in an upload of the provided folder.
+
+#### Synchronazation with the server:
+`update_request` method:
+update_request - method is in-charge of notifying a server an update is needed with the current client, happens each `TIME` interval, or is triggered by the watchdog module.
+
+each update consists the following: 
+1. `num_updates` the number of updates about to be transmitted.
+2. for each update the relative path is provided and full data.
+
+There are several different sanarios:
+1. `NEW_FILE` - new file is transmitted from client to server.
+2. `NEW_FOLDER` - new folder is transmitted from client to server.
+3. `DELETE` - a delete request of a folder or a file is transmitted to the server. 
 
 
-#### End of connection:
-After the client has received all the acknowledgment messages for the packages transmitted, it sends a FIN message to the server; after receiving a follow-up FIN message, the client is convinced the server has received the data in full and disconnects the connection.
 
+#### WatchDog Module:
+    Python API and shell utilities to monitor file system events.
+  The watchdog module monitors the provided folder and notifies the server about a change that occurred in the folder.
+  For every change that occured in the folder, the client will notify the server of the difference with the commands defined above.
+  
  ### Server-Side
  
  #### Connection initialization:
-The server iterates over an endless loop awaiting connections. (`SYN_FLG`) as a new connection arrives, 
-the server initializes a boolean array for tracking the order of the received packages.
+The server receives a connection from the client and passes the `client-id` provided.
+If the ID provided is invalid, the server generates a new client on the cloud and transmits the generated ID back to the client for future connections.
  
-  #### Package Transmission:
-As a connection has been initialized, the server receives new packages; for each package received, the server sends a corresponding ack message using the recv_pkg method.
+ 1. `Client-ID` - the ID of the client (as authorization information`
+ 2. `Session-ID` - the current session of the client.
+
+  #### Synchronazation with the client:
+`send_updates` method:
+send_updates - If the client requests an update, send all updates according to the client's id and session id.
+  The server keeps track of all updates that occur and are transmitted for each session of the current client.
+  By receiving the update request, the server transmits only the update relevant to the provided session.
   
- #### End of connection:
-After filling the boolean array, the server transmits a FIN message to the client resulting in its closing; if by the time of a timeout, no additional information was sent, the server closes the connection.
+  `add_update` method:
+  add_update - add the given update to all clients with the corresponding id and all possible session ids
+  when receiving a new update, the server adds the update to all sessions to push on future update requests.
+  
+ 
+ ##Visual Explanation:
+ 
+ ![image](https://user-images.githubusercontent.com/92247226/192823574-d9183725-7c75-4cf4-8e39-dbb16afb5add.png)
+
+`RED_COLOR`: Auto-Generated ID for the client.
+`GREEN_COLOR`: The synchronized folder.
+`PURPULE_COLOR`: The server's folder consits of all the clients.
+
+
+### Auto Push To Server On New Client:
+![2022-09-28-18-37-08](https://user-images.githubusercontent.com/92247226/192826430-9b77de9d-864f-4239-8816-48671b6cadf6.gif)
+
+
+### Auto Pull On Existing Client:
+![2022-09-28-18-43-27(1)](https://user-images.githubusercontent.com/92247226/192826129-d96c571f-fe7e-498a-8791-dfbf7e7ad231.gif)
+
+### WatchDog Trigger And Push To Server:
+![2022-09-28-18-37-08(1)](https://user-images.githubusercontent.com/92247226/192826614-50e6da4c-cf9c-4ea2-a53e-8d996f3af215.gif)
+
